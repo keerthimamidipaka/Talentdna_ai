@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TalentDNA AI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0B1013;
+    --panel: #121A1E;
+    --panel-2: #172227;
+    --line: #24343B;
+    --teal: #4FD1C5;
+    --violet: #A78BFA;
+    --amber: #F0B858;
+    --text: #E8EEF0;
+    --muted: #7C919A;
+    --danger: #E27D68;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+  }
+  .mono { font-family: 'SF Mono', 'Consolas', monospace; }
+
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  header .helix { font-size: 22px; color: var(--teal); }
+  header h1 {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+  header .tag {
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'SF Mono', 'Consolas', monospace;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 32px 80px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px;
+  }
+  .panel h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 0 0 16px;
+    font-family: 'SF Mono', 'Consolas', monospace;
+  }
+
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input[type=text], textarea {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 14px;
+    margin-bottom: 14px;
+    resize: vertical;
+  }
+  textarea { min-height: 110px; }
+  input[type=text]:focus, textarea:focus { outline: none; border-color: var(--teal); }
+
+  .dropzone {
+    border: 1.5px dashed var(--line);
+    border-radius: 8px;
+    padding: 22px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 14px;
+    transition: border-color 0.15s;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--teal); color: var(--teal); }
+  .dropzone input { display: none; }
+
+  button {
+    background: var(--teal);
+    color: #06181A;
+    border: none;
+    border-radius: 6px;
+    padding: 11px 18px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); }
+
+  .chip { display: inline-block; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 20px; padding: 5px 12px; font-size: 12px; margin: 3px 4px 3px 0; color: var(--muted); }
+  .chip.active { border-color: var(--teal); color: var(--teal); }
+
+  #status { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 18px; }
+  #status.err { color: var(--danger); }
+  #status.ok { color: var(--teal); }
+
+  .results { margin-top: 24px; }
+  .score-hero {
+    display: flex; align-items: center; gap: 24px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 24px; margin-bottom: 20px;
+  }
+  .score-num { font-size: 52px; font-weight: 700; font-family: 'SF Mono', monospace; color: var(--teal); }
+  .score-num span { font-size: 22px; color: var(--muted); }
+  .score-meta { color: var(--muted); font-size: 13px; }
+  .score-meta b { color: var(--text); }
+
+  .ev-list { list-style: none; padding: 0; margin: 0; }
+  .ev-list li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .ev-list li:last-child { border-bottom: none; }
+  .ev-list.strength li::before { content: "✓ "; color: var(--teal); }
+  .ev-list.gap li::before { content: "✗ "; color: var(--danger); }
+
+  .evo-item { display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .evo-item:last-child { border-bottom: none; }
+  .evo-arrow { color: var(--muted); font-family: monospace; }
+  .evo-actions { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr.rank-1 td:first-child { color: var(--teal); font-weight: 700; }
+
+  .section-title { font-size: 15px; font-weight: 600; margin: 32px 0 14px; }
+  canvas { max-height: 320px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="helix">🧬</span>
+  <h1>TalentDNA AI</h1>
+  <span class="tag">capability-based candidate intelligence · demo</span>
+  <span id="llmBadge" class="chip" style="margin-left:auto;">checking AI reasoning...</span>
+</header>
+
+<div class="wrap">
+
+  <div class="grid">
+    <!-- Candidate panel -->
+    <div class="panel">
+      <h2>01 · Candidate Resume</h2>
+      <div class="dropzone" id="dropzone">
+        <div id="dz-label">Drop a .pdf, .docx, or .txt resume here, or click to browse</div>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt">
+      </div>
+      <button id="uploadBtn" disabled>Generate Talent DNA</button>
+      <div id="candStatus" class="mono"></div>
+    </div>
+
+    <!-- Job panel -->
+    <div class="panel">
+      <h2>02 · Job Description</h2>
+      <label for="jobTitle">Role title</label>
+      <input type="text" id="jobTitle" placeholder="e.g. Senior Backend Engineer">
+      <label for="jobDesc">Paste job description</label>
+      <textarea id="jobDesc" placeholder="Paste the full JD text here..."></textarea>
+      <button id="jobBtn">Generate Job DNA</button>
+      <div id="jobStatus" class="mono"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <button id="matchBtn" class="secondary" disabled>Compare Candidate ↔ Job → Run Match</button>
+  </div>
+
+  <div id="resultsSection" class="results" style="display:none;">
+    <div class="score-hero">
+      <div class="score-num" id="scoreNum">--<span>/100</span></div>
+      <div class="score-meta">
+        <div><b id="matchCandName">–</b> vs <b id="matchJobTitle">–</b></div>
+        <div>Cosine similarity: <span id="cosineVal" class="mono"></span></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Radar · Candidate DNA vs Job DNA</h2>
+        <canvas id="radarChart"></canvas>
+      </div>
+      <div class="panel">
+        <h2>Explainable AI</h2>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">STRENGTHS</div>
+          <ul class="ev-list strength" id="strengthsList"></ul>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">GAPS</div>
+          <ul class="ev-list gap" id="gapsList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:20px;">
+      <h2>DNA Evolution Predictor</h2>
+      <div id="evolutionList"></div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:40px;">Bulk Candidate Upload</div>
+  <div class="panel">
+    <h2>03 · Upload Multiple Resumes at Once</h2>
+    <div class="dropzone" id="bulkDropzone">
+      <div id="bulk-dz-label">Drop multiple .pdf / .docx / .txt resumes here, or click to browse</div>
+      <input type="file" id="bulkFileInput" accept=".pdf,.docx,.txt" multiple>
+    </div>
+    <button id="bulkUploadBtn" disabled>Generate DNA for All Candidates</button>
+    <div id="bulkStatus" class="mono"></div>
+  </div>
+
+  <div class="section-title">Candidate Ranking (this job vs. all uploaded candidates)</div>
+  <div class="panel">
+    <table>
+      <thead><tr><th>#</th><th>Candidate</th><th>Match Score</th><th>Cosine Sim.</th></tr></thead>
+      <tbody id="rankTable"><tr><td colspan="4" style="color:var(--muted);">Upload candidates and create a job to see rankings.</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const API = ''; // same-origin
+let currentCandidate = null;
+let currentJob = null;
+let radarChartInstance = null;
+
+const $ = (id) => document.getElementById(id);
+const setStatus = (el, msg, cls) => { el.textContent = msg; el.className = 'mono ' + (cls || ''); };
+
+// --- File upload ---
+const dropzone = $('dropzone');
+const fileInput = $('fileInput');
+let selectedFile = null;
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) { selectedFile = e.dataTransfer.files[0]; onFileSelected(); }
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) { selectedFile = fileInput.files[0]; onFileSelected(); }
+});
+function onFileSelected() {
+  $('dz-label').textContent = `Selected: ${selectedFile.name}`;
+  $('uploadBtn').disabled = false;
+}
+
+$('uploadBtn').addEventListener('click', async () => {
+  if (!selectedFile) return;
+  $('uploadBtn').disabled = true;
+  setStatus($('candStatus'), 'Parsing resume & inferring capabilities...', '');
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+  try {
+    const res = await fetch(`${API}/api/candidates/upload`, { method: 'POST', body: fd });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Upload failed');
+    const data = await res.json();
+    currentCandidate = data;
+    setStatus($('candStatus'), `✓ DNA generated for ${data.name}`, 'ok');
+    updateMatchBtn();
+  } catch (err) {
+    setStatus($('candStatus'), '✗ ' + err.message, 'err');
+  } finally {
+    $('uploadBtn').disabled = false;
+  }
+});
+
+$('jobBtn').addEventListener('click', async () => {
+  const title = $('jobTitle').value.trim() || 'Untitled Role';
+  const description = $('jobDesc').value.trim();
+  if (!description) { setStatus($('jobStatus'), '✗ Paste a job description first', 'err'); return; }
+  setStatus($('jobStatus'), 'Extracting Job DNA...', '');
+  try {
+    const res = await fetch(`${API}/api/jobs`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description })
+    });
+    if (!res.ok) throw new Error('Job creation failed');
+    const data = await res.json();
+    currentJob = data;
+    setStatus($('jobStatus'), `✓ Job DNA generated for "${title}"`, 'ok');
+    updateMatchBtn();
+  } catch (err) {
+    setStatus($('jobStatus'), '✗ ' + err.message, 'err');
+  }
+});
+
+function updateMatchBtn() {
+  $('matchBtn').disabled = !(currentCandidate && currentJob);
+}
+
+$('matchBtn').addEventListener('click', async () => {
+  try {
+    const res = await fetch(`${API}/api/match`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidate_id: currentCandidate.id, job_id: currentJob.id })
+    });
+    const data = await res.json();
+    renderMatch(data);
+    renderRanking();
+  } catch (err) {
+    alert('Match failed: ' + err.message);
+  }
+});
+
+function renderMatch(d) {
+  $('resultsSection').style.display = 'block';
+  $('scoreNum').innerHTML = `${d.match_score}<span>/100</span>`;
+  $('matchCandName').textContent = d.candidate_name;
+  $('matchJobTitle').textContent = d.job_title;
+  $('cosineVal').textContent = d.cosine_similarity;
+
+  $('strengthsList').innerHTML = d.strengths.length
+    ? d.strengths.map(s => `<li>${s}</li>`).join('')
+    : '<li style="color:var(--muted)">No standout strengths for this JD\'s requirements</li>';
+  $('gapsList').innerHTML = d.gaps.length
+    ? d.gaps.map(g => `<li>${g}</li>`).join('')
+    : '<li style="color:var(--muted)">No significant gaps found</li>';
+
+  const evoHtml = d.evolution.slice(0, 5).map(e => `
+    <div class="evo-item">
+      <div>
+        <div>${e.capability.replace('_',' ')} &nbsp; <span class="mono">${e.current_score} <span class="evo-arrow">→</span> ${e.projected_score}</span></div>
+        <div class="evo-actions">${e.recommended_actions.join(' · ')}</div>
+      </div>
+    </div>`).join('');
+  $('evolutionList').innerHTML = evoHtml;
+
+  renderRadar(d.candidate_dna, d.job_dna);
+}
+
+function renderRadar(candidateDna, jobDna) {
+  const labels = Object.keys(candidateDna).map(k => k.replace('_', ' '));
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  if (radarChartInstance) radarChartInstance.destroy();
+  radarChartInstance = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Candidate',
+          data: Object.values(candidateDna),
+          borderColor: '#4FD1C5', backgroundColor: 'rgba(79,209,197,0.15)', pointRadius: 2,
+        },
+        {
+          label: 'Job Requirement',
+          data: Object.values(jobDna),
+          borderColor: '#A78BFA', backgroundColor: 'rgba(167,139,250,0.10)', pointRadius: 2,
+        }
+      ]
+    },
+    options: {
+      scales: {
+        r: {
+          min: 0, max: 100,
+          grid: { color: '#24343B' }, angleLines: { color: '#24343B' },
+          pointLabels: { color: '#7C919A', font: { size: 11 } },
+          ticks: { display: false }
+        }
+      },
+      plugins: { legend: { labels: { color: '#E8EEF0' } } }
+    }
+  });
+}
+
+// --- LLM status badge ---
+(async () => {
+  try {
+    const res = await fetch(`${API}/api/llm-status`);
+    const data = await res.json();
+    const badge = $('llmBadge');
+    if (data.available) {
+      badge.textContent = '✓ AI reasoning pass active';
+      badge.classList.add('active');
+    } else {
+      badge.textContent = 'Rule-based only (set ANTHROPIC_API_KEY for AI reasoning)';
+    }
+  } catch (e) { $('llmBadge').textContent = ''; }
+})();
+
+// --- Bulk upload ---
+const bulkDropzone = $('bulkDropzone');
+const bulkFileInput = $('bulkFileInput');
+let selectedBulkFiles = [];
+
+bulkDropzone.addEventListener('click', () => bulkFileInput.click());
+bulkDropzone.addEventListener('dragover', (e) => { e.preventDefault(); bulkDropzone.classList.add('drag'); });
+bulkDropzone.addEventListener('dragleave', () => bulkDropzone.classList.remove('drag'));
+bulkDropzone.addEventListener('drop', (e) => {
+  e.preventDefault(); bulkDropzone.classList.remove('drag');
+  selectedBulkFiles = Array.from(e.dataTransfer.files);
+  onBulkFilesSelected();
+});
+bulkFileInput.addEventListener('change', () => {
+  selectedBulkFiles = Array.from(bulkFileInput.files);
+  onBulkFilesSelected();
+});
+function onBulkFilesSelected() {
+  $('bulk-dz-label').textContent = selectedBulkFiles.length
+    ? `Selected ${selectedBulkFiles.length} file(s): ${selectedBulkFiles.map(f => f.name).join(', ')}`
+    : 'Drop multiple resumes here, or click to browse';
+  $('bulkUploadBtn').disabled = selectedBulkFiles.length === 0;
+}
+
+$('bulkUploadBtn').addEventListener('click', async () => {
+  if (!selectedBulkFiles.length) return;
+  $('bulkUploadBtn').disabled = true;
+  setStatus($('bulkStatus'), `Processing ${selectedBulkFiles.length} resumes...`, '');
+  const fd = new FormData();
+  selectedBulkFiles.forEach(f => fd.append('files', f));
+  try {
+    const res = await fetch(`${API}/api/candidates/bulk-upload`, { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('Bulk upload failed');
+    const data = await res.json();
+    const ok = data.uploaded.length;
+    const failed = data.errors.length;
+    setStatus($('bulkStatus'),
+      `✓ ${ok} candidate(s) processed${failed ? `, ✗ ${failed} failed (${data.errors.map(e => e.filename).join(', ')})` : ''}`,
+      failed ? 'err' : 'ok');
+    if (currentJob) renderRanking();
+  } catch (err) {
+    setStatus($('bulkStatus'), '✗ ' + err.message, 'err');
+  } finally {
+    $('bulkUploadBtn').disabled = false;
+  }
+});
+
+async function renderRanking() {
+
+  if (!currentJob) return;
+  const res = await fetch(`${API}/api/jobs/${currentJob.id}/rank`);
+  const ranked = await res.json();
+  $('rankTable').innerHTML = ranked.map((c, i) => `
+    <tr class="${i === 0 ? 'rank-1' : ''}">
+      <td>${i + 1}</td><td>${c.name}</td><td>${c.match_score}</td><td>${c.cosine_similarity}</td>
+    </tr>`).join('');
+}
+</script>
+
+</body>
+</html>
